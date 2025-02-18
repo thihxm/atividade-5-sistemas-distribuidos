@@ -1,0 +1,40 @@
+edition = "2023";
+
+package atividade5.base;
+
+option go_package = "github.com/thihxm/hotel-chain/proto/base";
+
+import "google/protobuf/timestamp.proto";
+
+message CreateReservationRequest {
+    // Required check-in date
+    google.protobuf.Timestamp check_in_date = 1;
+    
+    // Optional check-out date
+    google.protobuf.Timestamp check_out_date = 2;
+    
+    // Required origin
+    string origin = 3;
+    
+    // Required destination
+    string destination = 4;
+    
+    // Required number of people
+    int32 number_of_people = 5;
+}
+
+message CreateReservationResponse {
+    bool success = 1;
+    string message = 2;
+    string reservation_id = 3;
+}
+
+message RevertBookingRequest {
+    string reservation_id = 1;
+}
+
+message RevertBookingResponse {
+    bool success = 1;
+    string message = 2;
+}
+
