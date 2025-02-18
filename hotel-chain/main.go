@@ -127,7 +127,7 @@ func (s *server) BookHotel(_ context.Context, in *base.CreateReservationRequest)
 	var responseBuilder = base.CreateReservationResponse_builder{
 		Success:       success,
 		Message:       message,
-		ReservationId: reservation.Id,
+		ReservationId: &reservation.Id,
 	}
 
 	return responseBuilder.Build(), nil
