@@ -1,4 +1,4 @@
-edition = "2023";
+syntax = "proto3";
 
 package atividade5.base;
 
@@ -11,7 +11,7 @@ message CreateReservationRequest {
     google.protobuf.Timestamp check_in_date = 1;
     
     // Optional check-out date
-    google.protobuf.Timestamp check_out_date = 2;
+    optional google.protobuf.Timestamp check_out_date = 2;
     
     // Required origin
     string origin = 3;

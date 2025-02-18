@@ -112,8 +112,8 @@ func (s *server) BookHotel(_ context.Context, in *base.CreateReservationRequest)
 		success = false
 		message = err.Error()
 		var responseBuilder = base.CreateReservationResponse_builder{
-			Success: &success,
-			Message: &message,
+			Success: success,
+			Message: message,
 		}
 		return responseBuilder.Build(), nil
 	}
@@ -125,9 +125,9 @@ func (s *server) BookHotel(_ context.Context, in *base.CreateReservationRequest)
 	reservedRooms = append(reservedRooms, reservation)
 
 	var responseBuilder = base.CreateReservationResponse_builder{
-		Success:       &success,
-		Message:       &message,
-		ReservationId: &reservation.Id,
+		Success:       success,
+		Message:       message,
+		ReservationId: reservation.Id,
 	}
 
 	return responseBuilder.Build(), nil
@@ -147,8 +147,8 @@ func (s *server) RevertBooking(_ context.Context, in *base.RevertBookingRequest)
 	}
 
 	var responseBuilder = base.RevertBookingResponse_builder{
-		Success: &success,
-		Message: &message,
+		Success: success,
+		Message: message,
 	}
 	return responseBuilder.Build(), nil
 }
