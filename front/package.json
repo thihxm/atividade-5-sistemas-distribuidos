@@ -1,0 +1,43 @@
+{
+    "name": "front",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev --turbopack",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint",
+        "proto:reservations": "proto-loader-gen-types --longs=String --enums=String --defaults --includeComments -I protos/proto  -O ./protos/types --grpcLib @grpc/grpc-js reservations.proto",
+        "proto:types": "npm run proto:reservations"
+    },
+    "dependencies": {
+        "@phosphor-icons/react": "^2.1.7",
+        "@radix-ui/react-label": "^2.1.2",
+        "@radix-ui/react-popover": "^1.1.6",
+        "@radix-ui/react-slot": "^1.1.2",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "date-fns": "^4.1.0",
+        "next": "15.1.7",
+        "next-themes": "^0.4.4",
+        "react": "^19.0.0",
+        "react-day-picker": "8.10.1",
+        "react-dom": "^19.0.0",
+        "sonner": "^1.7.4",
+        "tailwind-merge": "^3.0.1",
+        "tailwindcss-animate": "^1.0.7"
+    },
+    "devDependencies": {
+        "@eslint/eslintrc": "^3",
+        "@grpc/grpc-js": "^1.12.6",
+        "@grpc/proto-loader": "^0.7.13",
+        "@types/node": "^20",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        "eslint": "^9",
+        "eslint-config-next": "15.1.7",
+        "postcss": "^8",
+        "tailwindcss": "^3.4.1",
+        "typescript": "^5"
+    }
+}
