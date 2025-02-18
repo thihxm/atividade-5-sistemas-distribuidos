@@ -1,0 +1,13 @@
+edition = "2023";
+
+package atividade5.hotelchain;
+
+option go_package = "github.com/thihxm/hotel-chain/proto/hotel-chain";
+
+import "base.proto";
+
+service HotelService {
+    rpc BookHotel(base.CreateReservationRequest) returns (base.CreateReservationResponse) {}
+    rpc RevertBooking(base.RevertBookingRequest) returns (base.RevertBookingResponse) {}
+}
+
