@@ -11,3 +11,6 @@ python -m grpc_tools.protoc --proto_path="$(dirname "$0")" --go_out="$(dirname "
 
 echo "Generating base"
 python -m grpc_tools.protoc --proto_path="$(dirname "$0")" --python_out="$(dirname "$0")"/../travel-agency/protos/base --grpc_python_out="$(dirname "$0")"/../travel-agency/protos/base base.proto
+
+echo "Generating gRPC"
+python -m grpc_tools.protoc --proto_path="$(dirname "$0")" --python_out="$(dirname "$0")"/../travel-agency/protos/gRPC --grpc_python_out="$(dirname "$0")"/../travel-agency/protos/gRPC gRPC.proto
