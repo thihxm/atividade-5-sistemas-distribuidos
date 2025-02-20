@@ -28,10 +28,17 @@ type server struct {
 	cfg *config.ApiConfig
 }
 
-func findAvailableCar(cfg *config.ApiConfig, requiredSeats int32, location string) (*database.Car, error) {
+func findAvailableCar(cfg *config.ApiConfig, requiredSeats int32, location string, checkInDate time.Time, checkOutDate *time.Time) (*database.Car, error) {
+	var endDate sql.NullTime
+	if checkOutDate != nil {
+		endDate = sql.NullTime{Time: *checkOutDate, Valid: true}
+	}
+
 	car, err := cfg.Queries.GetFirstAvailableCar(context.Background(), database.GetFirstAvailableCarParams{
-		Location: location,
-		Seats:    int64(requiredSeats),
+		Location:  location,
+		Seats:     int64(requiredSeats),
+		StartDate: checkInDate,
+		EndDate:   endDate,
 	})
 	if err != nil {
 		return nil, err
@@ -44,10 +51,16 @@ func (s *server) RentCar(_ context.Context, in *base.CreateReservationRequest) (
 	var success = true
 	var message = "Car rented successfully"
 
-	car, err := findAvailableCar(s.cfg, in.GetNumberOfPeople(), in.GetDestination())
+	var checkOutDate *time.Time
+	if in.GetCheckOutDate() != nil {
+		parsedCheckOutDate := in.GetCheckOutDate().AsTime()
+		checkOutDate = &parsedCheckOutDate
+	}
+
+	car, err := findAvailableCar(s.cfg, in.GetNumberOfPeople(), in.GetDestination(), in.GetCheckInDate().AsTime(), checkOutDate)
 	if err != nil {
 		success = false
-		message = err.Error()
+		message = "Nenhum carro disponível para a data selecionada"
 
 		var responseBuilder = base.CreateReservationResponse_builder{
 			Success: success,
@@ -56,22 +69,21 @@ func (s *server) RentCar(_ context.Context, in *base.CreateReservationRequest) (
 		return responseBuilder.Build(), nil
 	}
 
-	var checkOutDate *time.Time
-	if in.GetCheckOutDate() != nil {
-		parsedCheckOutDate := in.GetCheckOutDate().AsTime()
-		checkOutDate = &parsedCheckOutDate
+	var endDate sql.NullTime
+	if checkOutDate != nil {
+		endDate = sql.NullTime{Time: *checkOutDate, Valid: true}
 	}
 
 	reservation, err := s.cfg.Queries.CreateReservation(context.Background(), database.CreateReservationParams{
 		ID:        uuid.New().String(),
 		CarID:     car.ID,
 		StartDate: in.GetCheckInDate().AsTime(),
-		EndDate:   sql.NullTime{Time: *checkOutDate, Valid: checkOutDate != nil},
+		EndDate:   endDate,
 	})
 
 	if err != nil {
 		success = false
-		message = err.Error()
+		message = "Não foi possível criar a reserva"
 
 		var responseBuilder = base.CreateReservationResponse_builder{
 			Success: success,
