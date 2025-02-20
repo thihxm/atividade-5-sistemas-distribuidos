@@ -34,6 +34,8 @@ pedidos_realizados = []
 pedidos_revertidos = []
 
 # Encontrar passagem no banco ao realizar pedido
+
+
 def buscar_passagens(origem, destino, data):
     nome_arquivo_banco = "airline_db.db"
     conexao = sqlite3.connect(nome_arquivo_banco)
@@ -47,7 +49,7 @@ def buscar_passagens(origem, destino, data):
     cursor.execute('''SELECT id
                       FROM passagem 
                       WHERE origem = ? AND destino = ? and data = ?''', (origem, destino, data_str))
-    
+
     passagem = cursor.fetchall()
 
     conexao.close()
@@ -56,16 +58,18 @@ def buscar_passagens(origem, destino, data):
 
     if not passagem:  # Verifica se a lista está vazia
         return None  # Ou pode retornar uma mensagem personalizada
-    
+
     return passagem  # Retorna a lista de resultados
 
 # Incrementa ou decrementa o estoque de uma passagem no banco
+
+
 def atualizar_estoque(id_passagem, n):
     nome_arquivo_banco = "airline_db.db"
     conexao = sqlite3.connect(nome_arquivo_banco)
     cursor = conexao.cursor()
 
-    if(n > 0):
+    if (n > 0):
         cursor.execute('''UPDATE passagem
                         SET estoque = estoque + ? 
                         WHERE id = ?''', (n, id_passagem))
@@ -76,7 +80,8 @@ def atualizar_estoque(id_passagem, n):
 
     conexao.commit()
 
-    cursor.execute("SELECT id, origem, destino, estoque FROM passagem WHERE id = ?", (id_passagem, ))
+    cursor.execute(
+        "SELECT id, origem, destino, estoque FROM passagem WHERE id = ?", (id_passagem, ))
     passagem = cursor.fetchall()
 
     print('Atualizacao de Estoque:')
@@ -86,18 +91,21 @@ def atualizar_estoque(id_passagem, n):
         print(f"    destino: {item[2]}")
         print(f"    estoque atual: {item[3]}")
         print("    " + "-" * 20)
-    
+
     cursor.close()
     conexao.close()
 
     return
 
 # Busca pedidos não cancelados no banco e insere-os na lista pedidos_realizados
+
+
 def buscar_pedidos():
     conn = sqlite3.connect("airline_db.db")
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, id_passagem_ida, id_passagem_volta, numero_pessoas, mensagem, cancelado FROM pedido WHERE cancelado = 0")
+    cursor.execute(
+        "SELECT id, id_passagem_ida, id_passagem_volta, numero_pessoas, mensagem, cancelado FROM pedido WHERE cancelado = 0")
     pedidos = cursor.fetchall()
 
     for pedido in pedidos:
@@ -117,6 +125,8 @@ def buscar_pedidos():
     return
 
 # Cancelar pedido no banco
+
+
 def cancelar_pedido(id_pedido):
     print(f'Excluindo pedido {id_pedido} no banco...')
 
@@ -135,8 +145,10 @@ def cancelar_pedido(id_pedido):
     return
 
 # Salva pedido no banco
+
+
 def salvar_pedido(pedido):
-    print(f'Salvando pedido {pedido['id']} no banco...')
+    print(f'Salvando pedido {pedido["id"]} no banco...')
 
     nome_arquivo_banco = "airline_db.db"
     conexao = sqlite3.connect(nome_arquivo_banco)
@@ -145,11 +157,12 @@ def salvar_pedido(pedido):
     cursor.execute("""
                 INSERT INTO pedido (id, id_passagem_ida, id_passagem_volta, numero_pessoas, mensagem, cancelado)
                 VALUES (?, ?, ?, ?, ?, ?)
-                """, (pedido['id'], pedido['id_passagem_ida'], pedido['id_passagem_volta'], pedido['numero_pessoas'], pedido['mensagem'], pedido['cancelado']))
+                """, (pedido["id"], pedido["id_passagem_ida"], pedido["id_passagem_volta"], pedido["numero_pessoas"], pedido["mensagem"], pedido["cancelado"]))
 
     conexao.commit()
 
-    cursor.execute("SELECT id, id_passagem_ida, id_passagem_volta, numero_pessoas, mensagem, cancelado FROM pedido")
+    cursor.execute(
+        "SELECT id, id_passagem_ida, id_passagem_volta, numero_pessoas, mensagem, cancelado FROM pedido")
     pedidos = cursor.fetchall()
 
     print('Pedidos no Banco:')
@@ -159,13 +172,15 @@ def salvar_pedido(pedido):
         print(f"    ID passagem volta: {item[2]}")
         print(f"    Numero de pessoas: {item[3]}")
         print("    " + "-" * 20)
-    
+
     cursor.close()
     conexao.close()
 
     return
 
 # Busca passagem e atualiza o estoque - Somente ida
+
+
 def pedido_somente_ida(dados):
 
     check_in_date = dados.check_in_date.ToDatetime()
@@ -186,23 +201,30 @@ def pedido_somente_ida(dados):
             "id_passagem_volta": 0,
             "numero_pessoas": dados.number_of_people,
             "mensagem": "Passagem reservada com sucesso",
-            "cancelado":0
+            "cancelado": 0
         }
         salvar_pedido(pedido)
         pedidos_realizados.append(pedido)
         return pedido
 
 # Busca passagem e atualiza o estoque - Ida e volta
+
+
 def pedido_ida_volta(dados):
     print('metodo pedido')
-    
-    check_in_date = dados.check_in_date.ToDatetime()  # Converte Timestamp para datetime
-    check_out_date = dados.check_out_date.ToDatetime()  # Converte Timestamp para datetime
 
-    print(f'dados: {dados.origin, dados.destination, check_in_date, check_out_date}')
+    # Converte Timestamp para datetime
+    check_in_date = dados.check_in_date.ToDatetime()
+    # Converte Timestamp para datetime
+    check_out_date = dados.check_out_date.ToDatetime()
 
-    passagem_ida = buscar_passagens(dados.origin, dados.destination, check_in_date)
-    passagem_volta = buscar_passagens(dados.destination, dados.origin, check_out_date)
+    print(
+        f'dados: {dados.origin, dados.destination, check_in_date, check_out_date}')
+
+    passagem_ida = buscar_passagens(
+        dados.origin, dados.destination, check_in_date)
+    passagem_volta = buscar_passagens(
+        dados.destination, dados.origin, check_out_date)
     print('passagem buscada')
     if passagem_ida is None or passagem_volta is None:
         pedido = {
@@ -223,12 +245,14 @@ def pedido_ida_volta(dados):
             "id_passagem_volta": passagem_volta[0][0],
             "numero_pessoas": dados.number_of_people,
             "mensagem": "Passagem reservada com sucesso",
-            "cancelado":0
+            "cancelado": 0
         }
         pedidos_realizados.append(pedido)
         return pedido
 
 # Método para encontrar pedidos na lista pedidos_realizados
+
+
 def encontrar_pedido(pedido_id):
     for pedido in pedidos_realizados:
         if pedido["id"] == pedido_id:
@@ -236,6 +260,8 @@ def encontrar_pedido(pedido_id):
     return None
 
 # Implementação do serviço CompanhiaAerea definido no .proto
+
+
 class CompaniaAerea(gRPC_pb2_grpc.CompaniaAereaServicer):
     # Chamado pela Agencia de Viagens para solicitar passagens
     def SolicitarPassagens(self, request, context):
@@ -245,20 +271,20 @@ class CompaniaAerea(gRPC_pb2_grpc.CompaniaAereaServicer):
             pedido = pedido_ida_volta(request)
         else:
             pedido = pedido_somente_ida(request)
-            
+
         # Criar o pacote de resposta
-        
-        print(f'Pedido: {pedido['id']}')
-        if(pedido['id'] != 0):
+
+        print(f'Pedido: {pedido["id"]}')
+        if (pedido["id"] != 0):
             resposta = gRPC_pb2.Resposta(
                 success=True,
                 message='sucesso',
-                reservation_id=str(pedido['id'])
+                reservation_id=str(pedido["id"])
             )
         else:
             resposta = gRPC_pb2.Resposta(
                 success=False,
-                message=pedido['mensagem'],
+                message=pedido["mensagem"],
                 reservation_id='0'
             )
 
@@ -288,9 +314,10 @@ class CompaniaAerea(gRPC_pb2_grpc.CompaniaAereaServicer):
             return resposta
 
         # atualizar o estoque
-        atualizar_estoque(pedido['id_passagem_ida'], pedido['numero_pessoas'])
-        if(int(pedido['id_passagem_volta']) != 0):
-            atualizar_estoque(pedido['id_passagem_volta'], pedido['numero_pessoas'])            
+        atualizar_estoque(pedido["id_passagem_ida"], pedido["numero_pessoas"])
+        if (int(pedido["id_passagem_volta"]) != 0):
+            atualizar_estoque(pedido["id_passagem_volta"],
+                              pedido["numero_pessoas"])
 
         # excluir pedido do banco
         cancelar_pedido(request.reservation_id)
@@ -299,13 +326,14 @@ class CompaniaAerea(gRPC_pb2_grpc.CompaniaAereaServicer):
         pedidos_revertidos.append(pedido)
 
         # retirar pedido de pedidos_realizados
-        pedidos_realizados = [p for p in pedidos_realizados if p["id"] != pedido['id']]
+        pedidos_realizados = [
+            p for p in pedidos_realizados if p["id"] != pedido["id"]]
 
         resposta = gRPC_pb2.Resposta(
-                success=True,
-                message=f'Pedido {request.reservation_id} cancelado com sucesso!',
-                reservation_id=str(request.reservation_id)
-            )
+            success=True,
+            message=f'Pedido {request.reservation_id} cancelado com sucesso!',
+            reservation_id=str(request.reservation_id)
+        )
 
         print('Pedidos Atuais:')
         for item in pedidos_realizados:
@@ -317,6 +345,7 @@ class CompaniaAerea(gRPC_pb2_grpc.CompaniaAereaServicer):
 
         return resposta
 
+
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     gRPC_pb2_grpc.add_CompaniaAereaServicer_to_server(CompaniaAerea(), server)
@@ -324,6 +353,7 @@ def serve():
     print("Servidor gRPC rodando na porta 50052...")
     server.start()
     server.wait_for_termination()
+
 
 if __name__ == '__main__':
     buscar_pedidos()
