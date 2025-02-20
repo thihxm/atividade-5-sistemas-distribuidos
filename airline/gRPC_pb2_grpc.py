@@ -115,6 +115,11 @@ class CompaniaAereaStub(object):
                 request_serializer=gRPC__pb2.Requisicao.SerializeToString,
                 response_deserializer=gRPC__pb2.Resposta.FromString,
                 _registered_method=True)
+        self.ReverterPedido = channel.unary_unary(
+                '/gRPC.CompaniaAerea/ReverterPedido',
+                request_serializer=gRPC__pb2.RequisicaoCompensacao.SerializeToString,
+                response_deserializer=gRPC__pb2.Resposta.FromString,
+                _registered_method=True)
 
 
 class CompaniaAereaServicer(object):
@@ -127,12 +132,23 @@ class CompaniaAereaServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ReverterPedido(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_CompaniaAereaServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'SolicitarPassagens': grpc.unary_unary_rpc_method_handler(
                     servicer.SolicitarPassagens,
                     request_deserializer=gRPC__pb2.Requisicao.FromString,
+                    response_serializer=gRPC__pb2.Resposta.SerializeToString,
+            ),
+            'ReverterPedido': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReverterPedido,
+                    request_deserializer=gRPC__pb2.RequisicaoCompensacao.FromString,
                     response_serializer=gRPC__pb2.Resposta.SerializeToString,
             ),
     }
@@ -163,6 +179,33 @@ class CompaniaAerea(object):
             target,
             '/gRPC.CompaniaAerea/SolicitarPassagens',
             gRPC__pb2.Requisicao.SerializeToString,
+            gRPC__pb2.Resposta.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReverterPedido(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/gRPC.CompaniaAerea/ReverterPedido',
+            gRPC__pb2.RequisicaoCompensacao.SerializeToString,
             gRPC__pb2.Resposta.FromString,
             options,
             channel_credentials,

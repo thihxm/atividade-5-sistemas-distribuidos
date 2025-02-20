@@ -12,6 +12,7 @@ service AgenciaViagens {
 // CompaniaAerea
 service CompaniaAerea {
   rpc SolicitarPassagens (Requisicao) returns (Resposta);
+  rpc ReverterPedido (RequisicaoCompensacao) returns (Resposta);
 }
 
 // RedeHoteleira

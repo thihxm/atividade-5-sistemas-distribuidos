@@ -79,6 +79,14 @@ class AgenciaViagens(gRPC_pb2_grpc.AgenciaViagensServicer):
             response = stub.SolicitarPassagens(requisicao)
             print("Resposta do servidor:", response.message)
 
+            if not response.success:
+                response = gRPC_pb2.Resposta(
+                    success=response.success,
+                    message=response.message
+                )
+
+                return response
+
             response_hotel = stub_hotel.BookHotel(createReservationRequest)
             print("Resposta do Hotel:", response_hotel.message)
 
@@ -93,7 +101,9 @@ class AgenciaViagens(gRPC_pb2_grpc.AgenciaViagensServicer):
                 )
 
                 response = stub.ReverterPedido(requisicao_compensacao)
-                return response
+                print("Resposta do Reverter Passagens:", response.message)
+                
+                return response_hotel
 
             response_car = stub_car.RentCar(createReservationRequest)
             print("Resposta do Aluguel de Carros:", response_car.message)
@@ -104,18 +114,18 @@ class AgenciaViagens(gRPC_pb2_grpc.AgenciaViagensServicer):
                 )
 
                 response = stub.ReverterPedido(requisicao_compensacao)
-                print("Resposta do Reverter Pedido:", response.message)
+                print("Resposta do Reverter Pedido de Passagens:", response.message)
                 response = stub_hotel.RevertBooking(requisicao_compensacao)
                 print("Resposta do Reverter Pedido do Hotel:", response.message)
                 response = gRPC_pb2.Resposta(
                     success=response.success,
                     message=response.message
                 )
-                return response
+                return response_car
 
             response = gRPC_pb2.Resposta(
                 success=True,
-                message="Pacote de viagem solicitado com sucesso"
+                message="Pacote de viagem completo solicitado com sucesso!"
             )
             return response
 
@@ -144,24 +154,6 @@ class AgenciaViagens(gRPC_pb2_grpc.AgenciaViagensServicer):
 
             return response_a, response_b, response_c  # Retorna as respostas dos três serviços
 '''
-
-# Criar o pacote de resposta
-# resposta = gRPC_pb2.Resposta(
-#    sucesso=True,
-#    mensagem="sucesso"
-# )
-'''
-def SolicitarPassagens(gRPC_pb2.Requisicao requisicao):
-    # Conecta no servidor gRPC
-    with grpc.insecure_channel('localhost:50052') as channel:
-        stub = gRPC_pb2_grpc.CompaniaAereaStub(channel)
-
-        response = stub.SolicitarPassagens(requisicao)
-        print("Resposta do servidor:", response.mensagem)
-
-        return response
-'''
-
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
