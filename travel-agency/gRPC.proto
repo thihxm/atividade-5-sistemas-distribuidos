@@ -37,5 +37,17 @@ message Requisicao {
 message Resposta {
   bool success = 1;
   string message = 2;
+<<<<<<< Updated upstream
   optional string reservation_id = 3;
+=======
+  string reservation_id = 3;
+}
+
+// Mensagem de requisição de compensação
+message RequisicaoCompensacao {
+  string reservation_id = 1;
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 }
