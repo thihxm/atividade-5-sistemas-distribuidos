@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	port = flag.Int("port", 50052, "The server port")
+	port = flag.Int("port", 50053, "The server port")
 )
 
 // server is used to implement helloworld.GreeterServer.
