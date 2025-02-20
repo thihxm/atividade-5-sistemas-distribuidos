@@ -39,3 +39,12 @@ func (q *Queries) CreateReservation(ctx context.Context, arg CreateReservationPa
 	)
 	return i, err
 }
+
+const resetReservations = `-- name: ResetReservations :exec
+DELETE FROM reservations
+`
+
+func (q *Queries) ResetReservations(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, resetReservations)
+	return err
+}

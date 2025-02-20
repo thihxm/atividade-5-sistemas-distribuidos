@@ -20,6 +20,9 @@ func main() {
 
 	queries := database.New(db)
 
+	queries.ResetCars(context.Background())
+	queries.ResetReservations(context.Background())
+
 	queries.CreateCar(context.Background(), database.CreateCarParams{
 		ID:       uuid.New().String(),
 		Brand:    "Chevrolet",

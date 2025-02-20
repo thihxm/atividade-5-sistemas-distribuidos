@@ -72,3 +72,12 @@ func (q *Queries) GetFirstAvailableCar(ctx context.Context, arg GetFirstAvailabl
 	)
 	return i, err
 }
+
+const resetCars = `-- name: ResetCars :exec
+DELETE FROM cars
+`
+
+func (q *Queries) ResetCars(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, resetCars)
+	return err
+}

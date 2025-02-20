@@ -11,3 +11,6 @@ LIMIT 1;
 -- name: CreateCar :exec
 INSERT INTO cars (id, brand, model, seats, price, location)
 VALUES (?, ?, ?, ?, ?, ?);
+
+-- name: ResetCars :exec
+DELETE FROM cars;
