@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"flag"
 	"fmt"
 	"log"
@@ -9,52 +10,33 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	base "github.com/thihxm/car-rental/proto/base"
-	pb "github.com/thihxm/car-rental/proto/car-rental"
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/thihxm/car-rental/internal/config"
+	"github.com/thihxm/car-rental/internal/database"
+	base "github.com/thihxm/car-rental/protos/base"
+	pb "github.com/thihxm/car-rental/protos/car-rental"
 	"google.golang.org/grpc"
 )
 
-type Car struct {
-	Brand string
-	Model string
-	Seats int32
-	Price int32
-}
-
-type Reservation struct {
-	Id        string
-	Car       Car
-	StartDate time.Time
-	EndDate   time.Time
-}
-
 var (
-	port          = flag.Int("port", 50051, "The server port")
-	availableCars = []Car{}
-	reservedCars  = []Reservation{}
+	port = flag.Int("port", 50051, "The server port")
 )
 
 // server is used to implement helloworld.GreeterServer.
 type server struct {
 	pb.UnsafeCarRentalServiceServer
+	cfg *config.ApiConfig
 }
 
-func findAvailableCar(requiredSeats int32) (*Car, error) {
-	for _, car := range availableCars {
-		if car.Seats >= requiredSeats {
-			return &car, nil
-		}
+func findAvailableCar(cfg *config.ApiConfig, requiredSeats int32, location string) (*database.Car, error) {
+	car, err := cfg.Queries.GetFirstAvailableCar(context.Background(), database.GetFirstAvailableCarParams{
+		Location: location,
+		Seats:    int64(requiredSeats),
+	})
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("no available car found with %d or more seats", requiredSeats)
-}
-
-func removeCar(cars []Car, car Car) []Car {
-	for i, c := range cars {
-		if c == car {
-			return append(cars[:i], cars[i+1:]...)
-		}
-	}
-	return cars
+	return &car, nil
 }
 
 func (s *server) RentCar(_ context.Context, in *base.CreateReservationRequest) (*base.CreateReservationResponse, error) {
@@ -62,7 +44,7 @@ func (s *server) RentCar(_ context.Context, in *base.CreateReservationRequest) (
 	var success = true
 	var message = "Car rented successfully"
 
-	car, err := findAvailableCar(in.GetNumberOfPeople())
+	car, err := findAvailableCar(s.cfg, in.GetNumberOfPeople(), in.GetDestination())
 	if err != nil {
 		success = false
 		message = err.Error()
@@ -74,36 +56,49 @@ func (s *server) RentCar(_ context.Context, in *base.CreateReservationRequest) (
 		return responseBuilder.Build(), nil
 	}
 
-	availableCars = removeCar(availableCars, *car)
-
 	var checkOutDate *time.Time
 	if in.GetCheckOutDate() != nil {
 		parsedCheckOutDate := in.GetCheckOutDate().AsTime()
 		checkOutDate = &parsedCheckOutDate
 	}
 
-	var reservation = Reservation{
-		Id:        uuid.New().String(),
-		Car:       *car,
+	reservation, err := s.cfg.Queries.CreateReservation(context.Background(), database.CreateReservationParams{
+		ID:        uuid.New().String(),
+		CarID:     car.ID,
 		StartDate: in.GetCheckInDate().AsTime(),
 		EndDate:   *checkOutDate,
-	}
+	})
 
-	reservedCars = append(reservedCars, reservation)
+	if err != nil {
+		success = false
+		message = err.Error()
+
+		var responseBuilder = base.CreateReservationResponse_builder{
+			Success: success,
+			Message: message,
+		}
+		return responseBuilder.Build(), nil
+	}
 
 	var responseBuilder = base.CreateReservationResponse_builder{
 		Success:       success,
 		Message:       message,
-		ReservationId: &reservation.Id,
+		ReservationId: &reservation.ID,
 	}
 	return responseBuilder.Build(), nil
 }
 
 func main() {
-	availableCars = []Car{
-		{Brand: "Chevrolet", Model: "Onix", Seats: 5, Price: 100000},
-		{Brand: "Volkswagen", Model: "Up", Seats: 4, Price: 200000},
-		{Brand: "Fiat", Model: "Palio", Seats: 5, Price: 200000},
+	db, err := sql.Open("sqlite3", "./car-rental.db")
+	if err != nil {
+		log.Fatalf("Error opening database: %v", err)
+		return
+	}
+	defer db.Close()
+	dbQueries := database.New(db)
+
+	cfg := &config.ApiConfig{
+		Queries: dbQueries,
 	}
 
 	flag.Parse()
@@ -112,7 +107,7 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterCarRentalServiceServer(s, &server{})
+	pb.RegisterCarRentalServiceServer(s, &server{cfg: cfg})
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
