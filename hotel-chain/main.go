@@ -29,11 +29,15 @@ type server struct {
 }
 
 func findAvailableRoom(cfg *config.ApiConfig, requiredPeople int32, location string, checkInDate time.Time, checkOutDate *time.Time) (*database.Room, error) {
+	var endDate sql.NullTime
+	if checkOutDate != nil {
+		endDate = sql.NullTime{Time: *checkOutDate, Valid: true}
+	}
 	room, err := cfg.Queries.GetFirstAvailableRoom(context.Background(), database.GetFirstAvailableRoomParams{
 		Location:  location,
 		MaxPeople: int64(requiredPeople),
 		StartDate: checkInDate,
-		EndDate:   sql.NullTime{Time: *checkOutDate, Valid: checkOutDate != nil},
+		EndDate:   endDate,
 	})
 	if err != nil {
 		return nil, err
@@ -62,23 +66,28 @@ func (s *server) BookHotel(_ context.Context, in *base.CreateReservationRequest)
 	room, err := findAvailableRoom(s.cfg, in.GetNumberOfPeople(), in.GetDestination(), in.GetCheckInDate().AsTime(), checkOutDate)
 	if err != nil {
 		success = false
-		message = err.Error()
+		message = "Nenhum quarto disponível para a data selecionada"
+		log.Printf("Error finding available room: %v", err)
 		var responseBuilder = base.CreateReservationResponse_builder{
 			Success: success,
 			Message: message,
 		}
 		return responseBuilder.Build(), nil
 	}
+	var endDate sql.NullTime
+	if checkOutDate != nil {
+		endDate = sql.NullTime{Time: *checkOutDate, Valid: true}
+	}
 
 	reservation, err := s.cfg.Queries.CreateReservation(context.Background(), database.CreateReservationParams{
 		ID:        uuid.New().String(),
 		RoomID:    room.ID,
 		StartDate: in.GetCheckInDate().AsTime(),
-		EndDate:   sql.NullTime{Time: *checkOutDate, Valid: checkOutDate != nil},
+		EndDate:   endDate,
 	})
 	if err != nil {
 		success = false
-		message = err.Error()
+		message = "Não foi possível criar a reserva"
 	}
 
 	var responseBuilder = base.CreateReservationResponse_builder{
