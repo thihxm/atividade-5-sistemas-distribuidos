@@ -1,7 +1,19 @@
-from concurrent import futures
+import os  # noqa
+import sys  # noqa
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'protos/base'))  # noqa
+sys.path.insert(0, os.path.join(
+    os.path.dirname(__file__), 'protos/car-rental'))  # noqa
+sys.path.insert(0, os.path.join(
+    os.path.dirname(__file__), 'protos/hotel-chain'))  # noqa
+
 import grpc
 import gRPC_pb2
 import gRPC_pb2_grpc
+import base_pb2
+import car_rental_pb2_grpc
+import hotel_chain_pb2_grpc
+from concurrent import futures
+
 
 '''
     API gRPC deve receber os seguintes parametros:
@@ -14,44 +26,99 @@ import gRPC_pb2_grpc
 '''
 
 # Implementação do serviço definido no .proto
+
+
 class AgenciaViagens(gRPC_pb2_grpc.AgenciaViagensServicer):
     def SolicitarPacoteViagem(self, request, context):
         print('Fazendo requisicao das passagens...')
 
         if request.HasField("check_out_date"):
             requisicao = gRPC_pb2.Requisicao(
-                        check_in_date=request.check_in_date,
-                        check_out_date=request.check_out_date,
-                        origin=request.origin,
-                        destination=request.destination,
-                        number_of_people=request.number_of_people
-                    )
+                check_in_date=request.check_in_date,
+                check_out_date=request.check_out_date,
+                origin=request.origin,
+                destination=request.destination,
+                number_of_people=request.number_of_people
+            )
         else:
             requisicao = gRPC_pb2.Requisicao(
-                        check_in_date=request.check_in_date,
-                        origin=request.origin,
-                        destination=request.destination,
-                        number_of_people=request.number_of_people
-                    )
+                check_in_date=request.check_in_date,
+                origin=request.origin,
+                destination=request.destination,
+                number_of_people=request.number_of_people
+            )
 
-        #resposta = SolicitarPassagens(requisicao)
+        if request.HasField("check_out_date"):
+            createReservationRequest = base_pb2.CreateReservationRequest(
+                check_in_date=request.check_in_date,
+                check_out_date=request.check_out_date,
+                origin=request.origin,
+                destination=request.destination,
+                number_of_people=request.number_of_people
+            )
+        else:
+            createReservationRequest = base_pb2.CreateReservationRequest(
+                check_in_date=request.check_in_date,
+                origin=request.origin,
+                destination=request.destination,
+                number_of_people=request.number_of_people
+            )
+
+        # resposta = SolicitarPassagens(requisicao)
 
         # Conecta no servidor gRPC
-        with grpc.insecure_channel('localhost:50052') as channel:
+        with grpc.insecure_channel('localhost:50052') as channel, grpc.insecure_channel('localhost:50053') as channel_hotel, grpc.insecure_channel('localhost:50054') as channel_car:
+            # with grpc.insecure_channel('localhost:50053') as channel_hotel, grpc.insecure_channel('localhost:50054') as channel_car:
+
             stub = gRPC_pb2_grpc.CompaniaAereaStub(channel)
+            stub_hotel = hotel_chain_pb2_grpc.HotelServiceStub(
+                channel_hotel)
+            stub_car = car_rental_pb2_grpc.CarRentalServiceStub(
+                channel_car)
 
             response = stub.SolicitarPassagens(requisicao)
             print("Resposta do servidor:", response.message)
 
-            # testando a compensacao
-            '''if(response.success):
-                requisicao_compensacao = gRPC_pb2.RequisicaoCompensacao(
-                    reservation_id = response.reservation_id
+            response_hotel = stub_hotel.BookHotel(createReservationRequest)
+            print("Resposta do Hotel:", response_hotel.message)
+
+            if not response_hotel.success:
+                response_hotel = gRPC_pb2.Resposta(
+                    success=response_hotel.success,
+                    message=response_hotel.message
                 )
-            
+                # return response_hotel
+                requisicao_compensacao = gRPC_pb2.RequisicaoCompensacao(
+                    reservation_id=response.reservation_id
+                )
+
                 response = stub.ReverterPedido(requisicao_compensacao)
-            '''
+                return response
+
+            response_car = stub_car.RentCar(createReservationRequest)
+            print("Resposta do Aluguel de Carros:", response_car.message)
+
+            if not response_car.success:
+                requisicao_compensacao = gRPC_pb2.RequisicaoCompensacao(
+                    reservation_id=response.reservation_id
+                )
+
+                response = stub.ReverterPedido(requisicao_compensacao)
+                print("Resposta do Reverter Pedido:", response.message)
+                response = stub_hotel.RevertBooking(requisicao_compensacao)
+                print("Resposta do Reverter Pedido do Hotel:", response.message)
+                response = gRPC_pb2.Resposta(
+                    success=response.success,
+                    message=response.message
+                )
+                return response
+
+            response = gRPC_pb2.Resposta(
+                success=True,
+                message="Pacote de viagem solicitado com sucesso"
+            )
             return response
+
 
 '''
         with grpc.insecure_channel('localhost:50052') as channel_a, \
@@ -78,12 +145,11 @@ class AgenciaViagens(gRPC_pb2_grpc.AgenciaViagensServicer):
             return response_a, response_b, response_c  # Retorna as respostas dos três serviços
 '''
 
-
-        # Criar o pacote de resposta
-        #resposta = gRPC_pb2.Resposta(
-        #    sucesso=True,
-        #    mensagem="sucesso"
-        #)
+# Criar o pacote de resposta
+# resposta = gRPC_pb2.Resposta(
+#    sucesso=True,
+#    mensagem="sucesso"
+# )
 '''
 def SolicitarPassagens(gRPC_pb2.Requisicao requisicao):
     # Conecta no servidor gRPC
@@ -96,13 +162,16 @@ def SolicitarPassagens(gRPC_pb2.Requisicao requisicao):
         return response
 '''
 
+
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    gRPC_pb2_grpc.add_AgenciaViagensServicer_to_server(AgenciaViagens(), server)
+    gRPC_pb2_grpc.add_AgenciaViagensServicer_to_server(
+        AgenciaViagens(), server)
     server.add_insecure_port('[::]:50051')
     print("Servidor gRPC rodando na porta 50051...")
     server.start()
     server.wait_for_termination()
+
 
 if __name__ == '__main__':
     serve()
