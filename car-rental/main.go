@@ -96,10 +96,12 @@ func main() {
 	}
 	defer db.Close()
 	dbQueries := database.New(db)
+	log.Printf("Database connected")
 
 	cfg := &config.ApiConfig{
 		Queries: dbQueries,
 	}
+	log.Printf("Config loaded")
 
 	flag.Parse()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
