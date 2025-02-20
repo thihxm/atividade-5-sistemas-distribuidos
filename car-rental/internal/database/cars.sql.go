@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -51,7 +52,7 @@ type GetFirstAvailableCarParams struct {
 	Location  string
 	Seats     int64
 	StartDate time.Time
-	EndDate   time.Time
+	EndDate   sql.NullTime
 }
 
 func (q *Queries) GetFirstAvailableCar(ctx context.Context, arg GetFirstAvailableCarParams) (Car, error) {

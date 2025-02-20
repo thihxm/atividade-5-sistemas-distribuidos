@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -20,7 +21,7 @@ type CreateReservationParams struct {
 	ID        string
 	CarID     string
 	StartDate time.Time
-	EndDate   time.Time
+	EndDate   sql.NullTime
 }
 
 func (q *Queries) CreateReservation(ctx context.Context, arg CreateReservationParams) (Reservation, error) {

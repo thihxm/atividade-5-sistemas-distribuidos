@@ -66,7 +66,7 @@ func (s *server) RentCar(_ context.Context, in *base.CreateReservationRequest) (
 		ID:        uuid.New().String(),
 		CarID:     car.ID,
 		StartDate: in.GetCheckInDate().AsTime(),
-		EndDate:   *checkOutDate,
+		EndDate:   sql.NullTime{Time: *checkOutDate, Valid: checkOutDate != nil},
 	})
 
 	if err != nil {

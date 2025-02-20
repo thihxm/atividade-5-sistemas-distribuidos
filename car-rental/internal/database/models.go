@@ -5,6 +5,7 @@
 package database
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -21,5 +22,5 @@ type Reservation struct {
 	ID        string
 	CarID     string
 	StartDate time.Time
-	EndDate   time.Time
+	EndDate   sql.NullTime
 }

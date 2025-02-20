@@ -49,4 +49,13 @@ func main() {
 		Price:    200000,
 		Location: "Rio de Janeiro",
 	})
+
+	queries.CreateCar(context.Background(), database.CreateCarParams{
+		ID:       uuid.New().String(),
+		Brand:    "Ford",
+		Model:    "Fusion",
+		Seats:    5,
+		Price:    200000,
+		Location: "Curitiba",
+	})
 }
