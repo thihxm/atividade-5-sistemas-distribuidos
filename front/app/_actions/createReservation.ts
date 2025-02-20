@@ -1,23 +1,23 @@
 "use server";
 
-import createReservationsClient from "@/protos/reservations";
-import { CreateReservationRequest } from "@/protos/types/reservations/CreateReservationRequest";
-import { CreateReservationResponse } from "@/protos/types/reservations/CreateReservationResponse";
+import createReservationsClient from "@/protos/travelAgency";
+import { Requisicao } from "@/protos/types/gRPC/Requisicao";
+import { Resposta } from "@/protos/types/gRPC/Resposta";
 
 export default async function createReservation({
-    checkIn,
-    checkOut,
-    guests,
+    checkInDate,
+    checkOutDate,
+    numberOfPeople,
     origin,
     destination,
-}: CreateReservationRequest): Promise<CreateReservationResponse> {
+}: Requisicao): Promise<Resposta> {
     const reservationsClient = createReservationsClient();
     return new Promise((resolve, reject) => {
-        reservationsClient.BookHotel(
+        reservationsClient.SolicitarPacoteViagem(
             {
-                checkIn: checkIn.toISOString(),
-                checkOut: checkOut.toISOString(),
-                guests: guests,
+                checkInDate: checkInDate,
+                checkOutDate: checkOutDate,
+                numberOfPeople: numberOfPeople,
                 origin: origin,
                 destination: destination,
             },

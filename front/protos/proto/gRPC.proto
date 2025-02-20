@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package gRPC;
+
+import "google/protobuf/timestamp.proto";
+
+// AgenciaViagens
+service AgenciaViagens {
+  rpc SolicitarPacoteViagem (Requisicao) returns (Resposta);
+}
+
+// CompaniaAerea
+service CompaniaAerea {
+  rpc SolicitarPassagens (Requisicao) returns (Resposta);
+}
+
+// RedeHoteleira
+service RedeHoteleira {
+  rpc SolicitarHotel (Requisicao) returns (Resposta);
+}
+
+// Locadora
+service Locadora {
+  rpc SolicitarVeiculo (Requisicao) returns (Resposta);
+}
+
+// Mensagem de requisição
+message Requisicao {
+  google.protobuf.Timestamp check_in_date = 1;
+  optional google.protobuf.Timestamp check_out_date = 2;
+  string origin = 3;
+  string destination = 4;
+  int32 number_of_people = 5;
+}
+
+// Mensagem de resposta
+message Resposta {
+  bool success = 1;
+  string message = 2;
+  optional string reservation_id = 3;
+}
+
+// Mensagem de requisição de compensação
+message RequisicaoCompensacao {
+  string reservation_id = 1;
+}

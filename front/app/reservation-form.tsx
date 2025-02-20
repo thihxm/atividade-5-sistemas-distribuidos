@@ -4,24 +4,31 @@ import { Button } from "@/components/ui/button";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Airplane, Calendar, MapPin, Users } from "@phosphor-icons/react";
-import { useCallback, useEffect, useState } from "react";
+import {
+    Airplane,
+    ArrowClockwise,
+    Calendar,
+    MapPin,
+    Users,
+} from "@phosphor-icons/react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
+import createReservation from "./_actions/createReservation";
 
 interface ReservationData {
-    checkIn: Date;
-    checkOut?: Date;
-    guests: number;
+    checkInDate: Date;
+    checkOutDate?: Date;
+    numberOfPeople: number;
     origin: string;
     destination: string;
 }
 
 export function ReservationForm() {
     const [formData, setFormData] = useState<ReservationData>({
-        checkIn: new Date(),
-        checkOut: undefined,
-        guests: 1,
+        checkInDate: new Date(),
+        checkOutDate: undefined,
+        numberOfPeople: 1,
         origin: "",
         destination: "",
     });
@@ -29,13 +36,38 @@ export function ReservationForm() {
         undefined
     );
 
+    const [isReservationPending, startReservation] = useTransition();
+
     const handleSubmit = useCallback(
         (e: React.FormEvent) => {
             e.preventDefault();
-            toast.info("Reservation Data:", {
-                description: JSON.stringify(formData, null, 2),
+            startReservation(async () => {
+                const reservation = await createReservation({
+                    checkInDate: {
+                        seconds: formData.checkInDate.getTime() / 1000,
+                        nanos: 0,
+                    },
+                    checkOutDate: formData.checkOutDate
+                        ? {
+                              seconds: formData.checkOutDate.getTime() / 1000,
+                              nanos: 0,
+                          }
+                        : undefined,
+                    numberOfPeople: formData.numberOfPeople,
+                    origin: formData.origin,
+                    destination: formData.destination,
+                });
+                console.log(reservation);
+                if (reservation.success) {
+                    toast.success("Reserva criada com sucesso", {
+                        description: reservation.message,
+                    });
+                } else {
+                    toast.error("Não foi possível criar a reserva", {
+                        description: reservation.message,
+                    });
+                }
             });
-            // Here you would typically send the data to your backend
         },
         [formData]
     );
@@ -44,8 +76,8 @@ export function ReservationForm() {
         if (dateRange) {
             setFormData({
                 ...formData,
-                checkIn: dateRange.from ?? new Date(),
-                checkOut: dateRange.to,
+                checkInDate: dateRange.from ?? new Date(),
+                checkOutDate: dateRange.to,
             });
         }
     }, [dateRange]);
@@ -110,11 +142,11 @@ export function ReservationForm() {
                     <Input
                         type="number"
                         min="1"
-                        value={formData.guests}
+                        value={formData.numberOfPeople}
                         onChange={(e) =>
                             setFormData({
                                 ...formData,
-                                guests: parseInt(e.target.value),
+                                numberOfPeople: parseInt(e.target.value),
                             })
                         }
                         required
@@ -124,16 +156,23 @@ export function ReservationForm() {
                 <input
                     type="hidden"
                     name="checkIn"
-                    value={formData.checkIn.getTime()}
+                    value={formData.checkInDate.getTime()}
                 />
                 <input
                     type="hidden"
-                    name="checkOut"
-                    value={formData.checkOut?.getTime()}
+                    name="checkOutDate"
+                    value={formData.checkOutDate?.getTime()}
                 />
             </div>
 
-            <Button type="submit" className="ml-auto">
+            <Button
+                type="submit"
+                className="ml-auto"
+                disabled={isReservationPending}
+            >
+                {isReservationPending && (
+                    <ArrowClockwise className="w-4 h-4 mr-2 animate-spin" />
+                )}
                 Buscar Viagem
             </Button>
         </form>

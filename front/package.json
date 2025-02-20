@@ -7,8 +7,8 @@
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
-        "proto:reservations": "proto-loader-gen-types --longs=String --enums=String --defaults --includeComments -I protos/proto  -O ./protos/types --grpcLib @grpc/grpc-js reservations.proto",
-        "proto:types": "npm run proto:reservations"
+        "proto:travelAgency": "proto-loader-gen-types --longs=String --enums=String --defaults --includeComments -I protos/proto  -O ./protos/types --grpcLib @grpc/grpc-js gRPC.proto",
+        "proto:types": "npm run proto:travelAgency"
     },
     "dependencies": {
         "@phosphor-icons/react": "^2.1.7",

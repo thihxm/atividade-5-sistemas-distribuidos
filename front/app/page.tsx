@@ -14,7 +14,7 @@ export default function Home() {
                     >
                         <div className="h-full w-full bg-black bg-opacity-50 flex items-center justify-center">
                             <h1 className="text-4xl md:text-5xl font-bold text-white text-center">
-                                Encontre o sua próxima viagem
+                                Encontre a sua próxima viagem
                             </h1>
                         </div>
                     </div>
