@@ -26,8 +26,6 @@ from concurrent import futures
 '''
 
 # Implementação do serviço definido no .proto
-
-
 class AgenciaViagens(gRPC_pb2_grpc.AgenciaViagensServicer):
     def SolicitarPacoteViagem(self, request, context):
         print('Fazendo requisicao das passagens...')
@@ -77,7 +75,7 @@ class AgenciaViagens(gRPC_pb2_grpc.AgenciaViagensServicer):
                 channel_car)
 
             response = stub.SolicitarPassagens(requisicao)
-            print("Resposta do servidor:", response.message)
+            print("Resposta da Companhia Aerea:", response.message)
 
             if not response.success:
                 response = gRPC_pb2.Resposta(

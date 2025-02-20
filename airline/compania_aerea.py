@@ -16,19 +16,6 @@ from google.protobuf.timestamp_pb2 import Timestamp
         numero_pessoas: int
 '''
 
-'''
-class Passagem(object):
-    def __init__(self, origem, destino, data, estoque):
-        self.id = uuid.uuid4()
-        self.origem = origem
-        self.destino = destino
-        self.data = data
-        self.estoque = estoque
-
-    def __repr__(self):
-        return f"Passagem({self.origem} -> {self.destino}, {self.data}) - Estoque: {self.estoque}"
-'''
-
 pedidos_realizados = []
 
 pedidos_revertidos = []
@@ -142,6 +129,8 @@ def cancelar_pedido(id_pedido):
                     WHERE id = ?
                     ''', (id_pedido, ))
 
+    conn.commit()
+
     # Fechar conexão com o banco
     conn.close()
 
@@ -192,7 +181,7 @@ def pedido_somente_ida(dados):
     if passagem is None:
         pedido = {
             "id": 0,
-            "mensagem": "Erro: passagem indisponivel."
+            "mensagem": "Error - tickets unavailable"
         }
         return pedido
     else:
@@ -227,7 +216,7 @@ def pedido_ida_volta(dados):
     if passagem_ida is None or passagem_volta is None:
         pedido = {
             "id": 0,
-            "mensagem": "Erro: passagem indisponivel."
+            "mensagem": "Error - tickets unavailable"
         }
         return pedido
     else:
@@ -277,7 +266,7 @@ class CompaniaAerea(gRPC_pb2_grpc.CompaniaAereaServicer):
         if(pedido['id'] != 0):
             resposta = gRPC_pb2.Resposta(
                 success=True,
-                message=f'Pedido {pedido['id']} de passagem realizado com sucesso!',
+                message='Airline tickets booked successfully',
                 reservation_id=str(pedido['id'])
             )
         else:
@@ -308,7 +297,7 @@ class CompaniaAerea(gRPC_pb2_grpc.CompaniaAereaServicer):
         if pedido is None:
             resposta = gRPC_pb2.Resposta(
                 success=False,
-                message=f'Pedido {request.id} não encontrado para a compensacao!',
+                message=f'Error - Reservation {request.id} not found for compensation',
                 reservation_id=str(request.reservation_id)
             )
             return resposta
@@ -331,7 +320,7 @@ class CompaniaAerea(gRPC_pb2_grpc.CompaniaAereaServicer):
 
         resposta = gRPC_pb2.Resposta(
             success=True,
-            message=f'Pedido {request.reservation_id} de passagem cancelado com sucesso!',
+            message=f'Airline tickets ID {request.reservation_id} successfully canceled',
             reservation_id=str(request.reservation_id)
         )
 
