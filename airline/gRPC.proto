@@ -39,3 +39,8 @@ message Resposta {
   string message = 2;
   string reservation_id = 3;
 }
+
+// Mensagem de requisição de compensação
+message RequisicaoCompensacao {
+  string reservation_id = 1;
+}
