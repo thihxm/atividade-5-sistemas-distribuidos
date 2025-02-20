@@ -2,99 +2,51 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"flag"
 	"fmt"
 	"log"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	base "github.com/thihxm/hotel-chain/proto/base"
-	pb "github.com/thihxm/hotel-chain/proto/hotel-chain"
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/thihxm/hotel-chain/internal/config"
+	"github.com/thihxm/hotel-chain/internal/database"
+	base "github.com/thihxm/hotel-chain/protos/base"
+	pb "github.com/thihxm/hotel-chain/protos/hotel-chain"
 	"google.golang.org/grpc"
 )
 
-type Room struct {
-	Id        string
-	Name      string
-	Location  string
-	MaxPeople int32
-	Price     int32
-}
-
-type Reservation struct {
-	Id        string
-	Room      Room
-	StartDate time.Time
-	EndDate   *time.Time
-}
-
 var (
-	port           = flag.Int("port", 50051, "The server port")
-	availableRooms = []Room{}
-	reservedRooms  = []Reservation{}
+	port = flag.Int("port", 50052, "The server port")
 )
 
 // server is used to implement helloworld.GreeterServer.
 type server struct {
 	pb.UnimplementedHotelServiceServer
+	cfg *config.ApiConfig
 }
 
-func findAvailableRoom(requiredPeople int32, location string, checkInDate time.Time, checkOutDate *time.Time) (*Room, error) {
-	for _, room := range availableRooms {
-		if room.MaxPeople >= requiredPeople && strings.ToLower(room.Location) == strings.ToLower(location) {
-			isAvailable := true
-			for _, reservation := range reservedRooms {
-				if reservation.Room.Id == room.Id {
-					// Case 1: Existing reservation has no end date (ongoing)
-					if reservation.EndDate == nil {
-						if !checkInDate.Before(reservation.StartDate) {
-							isAvailable = false
-							break
-						}
-					} else {
-						// Case 2: New reservation has no checkout date (ongoing)
-						if checkOutDate == nil {
-							if !checkInDate.After(*reservation.EndDate) {
-								isAvailable = false
-								break
-							}
-						} else {
-							// Case 3: Both reservations have start/end dates
-							// Check if there's any overlap in the date ranges
-							if !(checkInDate.After(*reservation.EndDate) || checkOutDate.Before(reservation.StartDate)) {
-								isAvailable = false
-								break
-							}
-						}
-					}
-				}
-			}
-			if isAvailable {
-				return &room, nil
-			}
-		}
+func findAvailableRoom(cfg *config.ApiConfig, requiredPeople int32, location string, checkInDate time.Time, checkOutDate *time.Time) (*database.Room, error) {
+	room, err := cfg.Queries.GetFirstAvailableRoom(context.Background(), database.GetFirstAvailableRoomParams{
+		Location:  location,
+		MaxPeople: int64(requiredPeople),
+		StartDate: checkInDate,
+		EndDate:   sql.NullTime{Time: *checkOutDate, Valid: checkOutDate != nil},
+	})
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("no available room found with %d or more people at %s", requiredPeople, location)
+	return &room, nil
 }
 
-func findReservedRoom(reservationId string) (*Reservation, error) {
-	for _, reservation := range reservedRooms {
-		if reservation.Id == reservationId {
-			return &reservation, nil
-		}
+func findReservedRoom(cfg *config.ApiConfig, reservationId string) (*database.Reservation, error) {
+	reservation, err := cfg.Queries.GetReservation(context.Background(), reservationId)
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("no reserved room found with id %s", reservationId)
-}
-
-func removeReservation(reservations []Reservation, reservation Reservation) []Reservation {
-	for i, r := range reservations {
-		if r.Id == reservation.Id {
-			return append(reservations[:i], reservations[i+1:]...)
-		}
-	}
-	return reservations
+	return &reservation, nil
 }
 
 func (s *server) BookHotel(_ context.Context, in *base.CreateReservationRequest) (*base.CreateReservationResponse, error) {
@@ -107,7 +59,7 @@ func (s *server) BookHotel(_ context.Context, in *base.CreateReservationRequest)
 		parsedCheckOutDate := in.GetCheckOutDate().AsTime()
 		checkOutDate = &parsedCheckOutDate
 	}
-	room, err := findAvailableRoom(in.GetNumberOfPeople(), in.GetDestination(), in.GetCheckInDate().AsTime(), checkOutDate)
+	room, err := findAvailableRoom(s.cfg, in.GetNumberOfPeople(), in.GetDestination(), in.GetCheckInDate().AsTime(), checkOutDate)
 	if err != nil {
 		success = false
 		message = err.Error()
@@ -118,16 +70,21 @@ func (s *server) BookHotel(_ context.Context, in *base.CreateReservationRequest)
 		return responseBuilder.Build(), nil
 	}
 
-	var reservation = Reservation{
-		Id:   uuid.New().String(),
-		Room: *room,
+	reservation, err := s.cfg.Queries.CreateReservation(context.Background(), database.CreateReservationParams{
+		ID:        uuid.New().String(),
+		RoomID:    room.ID,
+		StartDate: in.GetCheckInDate().AsTime(),
+		EndDate:   sql.NullTime{Time: *checkOutDate, Valid: checkOutDate != nil},
+	})
+	if err != nil {
+		success = false
+		message = err.Error()
 	}
-	reservedRooms = append(reservedRooms, reservation)
 
 	var responseBuilder = base.CreateReservationResponse_builder{
 		Success:       success,
 		Message:       message,
-		ReservationId: &reservation.Id,
+		ReservationId: &reservation.ID,
 	}
 
 	return responseBuilder.Build(), nil
@@ -138,12 +95,16 @@ func (s *server) RevertBooking(_ context.Context, in *base.RevertBookingRequest)
 	var success = true
 	var message = "Hotel reservation reverted successfully"
 
-	reservedRoom, err := findReservedRoom(in.GetReservationId())
+	reservedRoom, err := findReservedRoom(s.cfg, in.GetReservationId())
 	if err != nil {
 		success = false
 		message = err.Error()
 	} else {
-		reservedRooms = removeReservation(reservedRooms, *reservedRoom)
+		err = s.cfg.Queries.DeleteReservation(context.Background(), reservedRoom.ID)
+		if err != nil {
+			success = false
+			message = err.Error()
+		}
 	}
 
 	var responseBuilder = base.RevertBookingResponse_builder{
@@ -154,10 +115,16 @@ func (s *server) RevertBooking(_ context.Context, in *base.RevertBookingRequest)
 }
 
 func main() {
-	availableRooms = []Room{
-		{Id: "1", Name: "Quarto SP", Location: "São Paulo", MaxPeople: 2, Price: 100},
-		{Id: "2", Name: "Quarto CWB", Location: "Curitiba", MaxPeople: 4, Price: 200},
-		{Id: "3", Name: "Quarto RIO", Location: "Rio de Janeiro", MaxPeople: 3, Price: 300},
+	db, err := sql.Open("sqlite3", "./hotel-chain.db")
+	if err != nil {
+		log.Fatalf("Error opening database: %v", err)
+		return
+	}
+	defer db.Close()
+	dbQueries := database.New(db)
+
+	cfg := &config.ApiConfig{
+		Queries: dbQueries,
 	}
 
 	flag.Parse()
@@ -166,7 +133,7 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterHotelServiceServer(s, &server{})
+	pb.RegisterHotelServiceServer(s, &server{cfg: cfg})
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
