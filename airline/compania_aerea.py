@@ -276,6 +276,8 @@ class CompaniaAerea(gRPC_pb2_grpc.CompaniaAereaServicer):
                 reservation_id='0'
             )
 
+        print(resposta.message)
+
         print('Pedidos Atuais:')
         for item in pedidos_realizados:
             print(f"    ID pedido: {item['id']}")

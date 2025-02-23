@@ -74,16 +74,16 @@ class AgenciaViagens(gRPC_pb2_grpc.AgenciaViagensServicer):
             stub_car = car_rental_pb2_grpc.CarRentalServiceStub(
                 channel_car)
 
-            response = stub.SolicitarPassagens(requisicao)
-            print("Resposta da Companhia Aerea:", response.message)
+            response_airline = stub.SolicitarPassagens(requisicao)
+            print("Resposta da Companhia Aerea:", response_airline.message)
 
-            if not response.success:
-                response = gRPC_pb2.Resposta(
-                    success=response.success,
-                    message=response.message
+            if not response_airline.success:
+                response_airline = gRPC_pb2.Resposta(
+                    success=response_airline.success,
+                    message=response_airline.message
                 )
 
-                return response
+                return response_airline
 
             response_hotel = stub_hotel.BookHotel(createReservationRequest)
             print("Resposta do Hotel:", response_hotel.message)
@@ -95,11 +95,11 @@ class AgenciaViagens(gRPC_pb2_grpc.AgenciaViagensServicer):
                 )
                 # return response_hotel
                 requisicao_compensacao = gRPC_pb2.RequisicaoCompensacao(
-                    reservation_id=response.reservation_id
+                    reservation_id=response_airline.reservation_id
                 )
 
-                response = stub.ReverterPedido(requisicao_compensacao)
-                print("Resposta do Reverter Passagens:", response.message)
+                response_airline = stub.ReverterPedido(requisicao_compensacao)
+                print("Resposta do Reverter Passagens:", response_airline.message)
                 
                 return response_hotel
 
@@ -107,24 +107,31 @@ class AgenciaViagens(gRPC_pb2_grpc.AgenciaViagensServicer):
             print("Resposta do Aluguel de Carros:", response_car.message)
 
             if not response_car.success:
-                requisicao_compensacao = gRPC_pb2.RequisicaoCompensacao(
-                    reservation_id=response.reservation_id
+                requisicao_compensacao_airline = gRPC_pb2.RequisicaoCompensacao(
+                    reservation_id=response_airline.reservation_id
+                )
+                
+                requisicao_compensacao_hotel = gRPC_pb2.RequisicaoCompensacao(
+                    reservation_id=response_hotel.reservation_id
                 )
 
-                response = stub.ReverterPedido(requisicao_compensacao)
-                print("Resposta do Reverter Pedido de Passagens:", response.message)
-                response = stub_hotel.RevertBooking(requisicao_compensacao)
-                print("Resposta do Reverter Pedido do Hotel:", response.message)
-                response = gRPC_pb2.Resposta(
-                    success=response.success,
-                    message=response.message
-                )
+                response_airline = stub.ReverterPedido(requisicao_compensacao_airline)
+                print("Resposta do Reverter Pedido de Passagens:", response_airline.message)
+                response_hotel = stub_hotel.RevertBooking(requisicao_compensacao_hotel)
+                print("Resposta do Reverter Pedido do Hotel:", response_hotel.message)
+
                 return response_car
 
             response = gRPC_pb2.Resposta(
                 success=True,
-                message="Pacote de viagem completo solicitado com sucesso!"
+                message='Pacote de viagem completo solicitado com sucesso!'
             )
+
+            print(f'''\nPacote de viagem completo solicitado com sucesso!
+Airline reservation: {response_airline.reservation_id}
+Hotel reservation: {response_hotel.reservation_id}
+Car reservation: {response_car.reservation_id}''')
+            
             return response
 
 
